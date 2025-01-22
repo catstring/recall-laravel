@@ -20,15 +20,29 @@ jobs:
 
       - name: do all
         run: |
-          ssh -o StrictHostKeyChecking=no ec2-user@13.210.154.160 << 'EOF'
-            sudo mkdir -p /var/www/recall-laravel
-            sudo chown -R ec2-user:ec2-user /var/www/recall-laravel
-            sudo chmod -R 755 /var/www/recall-laravel
-          EOF
-          
-          rsync -avz --delete -e "ssh -o StrictHostKeyChecking=no" * ec2-user@13.210.154.160:/var/www/recall-laravel
-          
-          ssh -o StrictHostKeyChecking=no ec2-user@13.210.154.160 << 'EOF'
-            sudo chown -R nginx:nginx /var/www/recall-laravel
+          ssh -o StrictHostKeyChecking=no ec2-user@13.210.154.160 << EOF
+            PROJECT_DIR="/var/www"
+            PROJECT_NAME="recall-laravel"
+            REPO_URL="https://github.com/catstring/recall-laravel.git"
+
+            sudo chown -R ec2-user:ec2-user \${PROJECT_DIR}
+            cd \${PROJECT_DIR}
+
+            # Check if the directory exists
+            if [ ! -d "\${PROJECT_NAME}" ]; then
+              # Directory does not exist, clone the repository
+              sudo git clone \${REPO_URL}
+              composer install
+            else
+              # Directory exists, pull the latest changes
+              cd \${PROJECT_NAME}
+              sudo git pull
+            fi
+
+            php artisan cache:clear
+            php artisan config:clear
+            php artisan route:clear
+
+            sudo chown -R nginx:nginx \${PROJECT_DIR}
           EOF
 
